@@ -2,9 +2,12 @@ const BufferSturcture = require('./BufferStructure.js');
 const ComputeTx = require('./ComputeTx.js');
 const ArrayOperations = require('./ArrayOperations.js');
 
-
 class BufferOperations extends BufferSturcture {
-
+    /**
+     * constructor
+     * @param {Uint8Array} array
+     * @param {String} fileType
+     */
     constructor(array, fileType) {
         super(array, fileType);
         this.arrayModification = [];
@@ -149,7 +152,9 @@ class BufferOperations extends BufferSturcture {
         // Getting modification cost
         let modification = originalArrayLength - (processedArray.length + 4);
 
+        // TODO: That does not do anything as the comparison is bad
         if (textArray !== processedArray) {
+            // gets the length of the new entry
             const stringSizeArrayUpdated = ComputeTx.convertDecimalToByteArray(stringSize - modification);
 
             // Replacing modified section in array
@@ -157,7 +162,7 @@ class BufferOperations extends BufferSturcture {
                 this.arrayBuffer,
                 offset,
                 array,
-                ArrayOperations.concatArrays(stringSizeArrayUpdated, processedArray)
+                ArrayOperations.concatArrays(stringSizeArrayUpdated, processedArray) // appends the length before the new generated string
             );
 
             this.registerModification(absoluteOffsetInitial, modification);

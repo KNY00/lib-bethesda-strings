@@ -2,7 +2,11 @@ const ComputeTx = require('./ComputeTx.js');
 const ArrayOperations = require('./ArrayOperations.js');
 
 class BufferStructure {
-
+    /**
+     * constructor
+     * @param {Uint8Array} array
+     * @param {String} fileType
+     */
     constructor(array, fileType) {
         this.arrayData = array;
 
