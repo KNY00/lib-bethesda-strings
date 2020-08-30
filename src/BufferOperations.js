@@ -3,7 +3,7 @@ const Uint32 = require('./uint32');
 const ArrayOperations = require('./array-operations');
 
 /**
- *
+ * Performs operations on the buffer
  * @extends BufferSturcture
  */
 class BufferOperations extends BufferSturcture {
@@ -11,7 +11,7 @@ class BufferOperations extends BufferSturcture {
      * constructor
      * @constructs
      * @param {Uint8Array} array - file buffer
-     * @param {String} fileType - extension ilstrings, dlstrings, strings
+     * @param {string} fileType - extension ilstrings, dlstrings, strings
      */
     constructor(array, fileType) {
         super(array, fileType);
@@ -58,10 +58,14 @@ class BufferOperations extends BufferSturcture {
         });
 
         // PREVENTS OPERATIONS ON DUPLICATES
-        // Sometimes, for subtitles in game, a dialogue can have multiple addresses
+        // Sometimes, like for subtitles in game, a String Data can have multiple addresses
         bufferObject = bufferObject.reduce((accumulator, currentValue) => {
             let relativeOffsetAlreadyExists = false;
 
+            /**
+             * Parses previous (accumulator) values to make sure that
+             * an address doesn't already point to a String Data
+             */
             for (let x = 0; x < accumulator.length; x += 1) {
                 if (
                     accumulator[x].relativeOffset ===
@@ -79,63 +83,78 @@ class BufferOperations extends BufferSturcture {
                 );
                 return accumulator;
             } else {
+                /**
+                 * if it does not already exist
+                 * we save the current value in the accumulator
+                 */
                 return [...accumulator, currentValue];
             }
         }, []);
 
-        for (let index = 0; index < bufferObject.length; index++) {
-            const element = bufferObject[index];
+        for (let index = 0; index < bufferObject.length; index += 1) {
+            const stringDataObject = bufferObject[index];
 
-            // bufferObject.forEach((element, index) => {
+            // bufferObject.forEach((stringDataObject, index) => {
             // Absolute offset calculated from 4-pairs-hex sequence
-            const offset = this.getOffset(element.absoluteOffset);
+            const offset = this.getOffset(stringDataObject.absoluteOffset);
 
-            const relativeSeqLocation = element.address + 4;
+            /**
+             * update the relative offset of the String Data
+             * in the Directory Entry
+             * in the Buffer
+             */
+            const relativeSeqLocation = stringDataObject.address + 4;
             this.Uint32ArrayUpdate(
-                element.relativeOffset - offset,
+                stringDataObject.relativeOffset - offset,
                 relativeSeqLocation
             );
 
-            // Update relative offset of all constructs
+            /**
+             * Updates relative offset of all in the Directory Entries
+             * that point to the currently parsed Data String
+             * It is useful here to remind that Directory Entries
+             * that point to the same String Data were ignored (by the reducer)
+             */
             this.updateArrayOfRelativeOffsets(
-                element.relativeOffset,
-                element.relativeOffset - offset
+                stringDataObject.relativeOffset,
+                stringDataObject.relativeOffset - offset
             );
 
-            /*
-             * if during a previous modification the segment string has already been changed
-             * the (length) of element and his (nullPoint) change also
-             * so we have to calculate them one more time here accordingly to the potential changes that have been made
-             * of course the (stringArray) changes also
-             * Example: xy[SPE][SPE][NULL]{3} changes to xy[Nor][NULL]{4]
+            /**
+             * gets the correct absolute offset and endpoint
+             * based on changes made on the buffer
              */
-            const absoluteOffsetAdapted = element.absoluteOffset - offset;
+            const absoluteOffsetAdapted =
+                stringDataObject.absoluteOffset - offset;
             const endPoint = super.getEndPoint(
                 this.arrayBuffer,
                 absoluteOffsetAdapted
             );
-            const entry = this.arrayBuffer.slice(
+
+            const stringData = this.arrayBuffer.slice(
                 absoluteOffsetAdapted,
                 endPoint
             );
 
-            // MODIFICATION HERE
-            if (conditionFx(element)) {
+            // applies filter then modifies ...
+            if (conditionFx(stringDataObject)) {
                 this.modifyString(
-                    entry,
+                    stringData,
                     absoluteOffsetAdapted,
-                    element.absoluteOffset,
+                    stringDataObject.absoluteOffset,
                     modificationFx,
-                    element
+                    stringDataObject
                 );
                 console.log(
-                    'PERCENTAGE : ' + (index / bufferObject.length) * 100
+                    `PERCENTAGE : ${(index / bufferObject.length) * 100}`
                 );
             }
         }
 
-        // change total size of string data in the
-        // 8-byte header that contains the count of strings and the total size of the string data at the end of the file
+        // Changes total size of String Data in the
+        // 8-bytes header of the buffer
+        // It contains the count of strings and
+        // the total size of the string data at the end of the file
         const totalTxtLength = this.getStringDataSize();
         this.Uint32ArrayUpdate(totalTxtLength, 4);
 
@@ -143,49 +162,88 @@ class BufferOperations extends BufferSturcture {
     }
 
     /**
-     * gets array size from the beginning of the string data
-     * @returns {number}
+     * Sums all the modifications that occur when modifying String Data
+     * @description Size of string data that follows after header and directory.
+     * @returns {number} All String Data members length
      */
     getStringDataSize() {
         let totalOffset = 0;
 
-        for (let x = 0; x < this.arrayModification.length; x++) {
+        for (let x = 0; x < this.arrayModification.length; x += 1) {
             const row = this.arrayModification[x];
 
-            totalOffset += row.chars;
+            totalOffset += row.charsAdded;
         }
 
         return super.textLength - totalOffset;
     }
 
     /**
-     * update uint32array based on his position
-     * @param {number} newValue
-     * @param {number} location
-     * @constructor
+     * Updates uint32 4-bytes array based on his position in the buffer
+     * @constructs
+     * @param {number} newValue - The new value to be passed
+     * @param {number} location - Where the the modification should happen in the buffer
      */
     Uint32ArrayUpdate(newValue, location) {
-        let arrayBytes = Uint32.fromDecimalToByteArray(newValue);
+        const arrayBytes = Uint32.fromDecimalToByteArray(newValue);
 
-        for (let z = 0; z < arrayBytes.length; z++) {
+        for (let z = 0; z < arrayBytes.length; z += 1) {
             this.arrayBuffer[location + z] = arrayBytes[z];
         }
     }
 
     /**
-     * Modify string on .dlstrings and .ilstrings files
-     * @param array
-     * @param offset
-     * @param absoluteOffsetInitial
-     * @param modificationFx
-     * @param entryObject
+     * Selects which function to use to modify String Data depending on file extension
+     * @param {Uint8Array} array - String Data
+     * @param {number} absoluteOffsetModified - real Absolute offset calculated, that supports changes
+     * @param {number} absoluteOffsetInitial - initial Absolute offset
+     * @param modificationFx - function that is going to perform modification
+     * @param {StringDataObject} stringDataObject
+     * @throws {Error} will throw an error if extension is not supported
+     */
+    modifyString(
+        array,
+        absoluteOffsetModified,
+        absoluteOffsetInitial,
+        modificationFx,
+        stringDataObject
+    ) {
+        if (this.fileType === 'dlstrings' || this.fileType === 'ilstrings') {
+            return this.modifyDotIlstringsDlStringsString(
+                array,
+                absoluteOffsetModified,
+                absoluteOffsetInitial,
+                modificationFx,
+                stringDataObject
+            );
+        }
+        if (this.fileType === 'strings') {
+            return this.modifyDotStringsString(
+                array,
+                absoluteOffsetModified,
+                absoluteOffsetInitial,
+                modificationFx,
+                stringDataObject
+            );
+        }
+
+        throw new Error('File extension is not supported.');
+    }
+
+    /**
+     * Modifies String Data on .dlstrings and .ilstrings files
+     * @param {Uint8Array} array - String Data
+     * @param {number} absoluteOffsetModified - real Absolute offset calculated, that supports changes
+     * @param {number} absoluteOffsetInitial - initial Absolute offset
+     * @param modificationFx - function that is going to perform modification
+     * @param {StringDataObject} stringDataObject
      */
     modifyDotIlstringsDlStringsString(
         array,
-        offset,
+        absoluteOffsetModified,
         absoluteOffsetInitial,
         modificationFx,
-        entryObject
+        stringDataObject
     ) {
         const originalArrayLength = array.length;
 
@@ -196,12 +254,12 @@ class BufferOperations extends BufferSturcture {
         const stringSize = Uint32.fromByteArrayToDecimal(stringSizeArray);
 
         // taking string part
-        let textArray = array.slice(4);
+        const textArray = array.slice(4);
 
-        const processedArray = modificationFx([...textArray], entryObject);
+        const processedArray = modificationFx([...textArray], stringDataObject);
 
         // Getting modification cost
-        let modification = originalArrayLength - (processedArray.length + 4);
+        const modification = originalArrayLength - (processedArray.length + 4);
 
         // TODO: That does not do anything as the comparison is bad
         if (textArray !== processedArray) {
@@ -213,7 +271,7 @@ class BufferOperations extends BufferSturcture {
             // Replacing modified section in array
             this.arrayBuffer = ArrayOperations.replaceSectionInArray(
                 this.arrayBuffer,
-                offset,
+                absoluteOffsetModified,
                 array,
                 ArrayOperations.concatArrays(
                     stringSizeArrayUpdated,
@@ -229,25 +287,25 @@ class BufferOperations extends BufferSturcture {
     }
 
     /**
-     * Modify string on .strings files
-     * @param array
-     * @param offset
-     * @param absoluteOffsetInitial
-     * @param modificationFx
-     * @param entryObject
+     * Modifies Data String on .strings files
+     * @param {Uint8Array} array - String Data
+     * @param {number} absoluteOffsetModified - real Absolute offset calculated, that supports changes
+     * @param {number} absoluteOffsetInitial - initial Absolute offset
+     * @param modificationFx - function that is going to perform modification
+     * @param {StringDataObject} stringDataObject
      */
     modifyDotStringsString(
         array,
-        offset,
+        absoluteOffsetModified,
         absoluteOffsetInitial,
         modificationFx,
-        entryObject
+        stringDataObject
     ) {
-        let textArray = [...array];
+        const textArray = [...array];
 
         const originalArrayLength = textArray.length;
 
-        const processedArray = modificationFx([...textArray], entryObject);
+        const processedArray = modificationFx([...textArray], stringDataObject);
 
         // Getting modification cost
         const modification = originalArrayLength - processedArray.length;
@@ -256,7 +314,7 @@ class BufferOperations extends BufferSturcture {
             // Replacing modified section in array
             this.arrayBuffer = ArrayOperations.replaceSectionInArray(
                 this.arrayBuffer,
-                offset,
+                absoluteOffsetModified,
                 array,
                 processedArray
             );
@@ -269,68 +327,33 @@ class BufferOperations extends BufferSturcture {
     }
 
     /**
-     * Selects which function to use to modify string depending of file extension
-     * @param array
-     * @param offset
-     * @param absoluteOffsetInitial
-     * @param modificationFx
-     * @param entryObject
+     * Adds any change made to a Data String to arrayModification
+     * @constructs
+     * @param {number} position - absolute offset
+     * @param {number} charsAdded - between text length and end of file if ilstrings or dlstrings
      */
-    modifyString(
-        array,
-        offset,
-        absoluteOffsetInitial,
-        modificationFx,
-        entryObject
-    ) {
-        if (this.fileType === 'dlstrings' || this.fileType === 'ilstrings') {
-            return this.modifyDotIlstringsDlStringsString(
-                array,
-                offset,
-                absoluteOffsetInitial,
-                modificationFx,
-                entryObject
-            );
-        } else if (this.fileType === 'strings') {
-            return this.modifyDotStringsString(
-                array,
-                offset,
-                absoluteOffsetInitial,
-                modificationFx,
-                entryObject
-            );
-        }
-
-        throw 'File extension is not supported.';
-    }
-
-    /**
-     * Records any change made to string part of the file (between text length and end of file )
-     * @param position
-     * @param numberCharAffected
-     */
-    registerModification(position, numberCharAffected) {
+    registerModification(position, charsAdded) {
         this.arrayModification.push({
             key: position,
-            chars: numberCharAffected,
+            charsAdded,
         });
     }
 
     /**
-     * Calculates what needs to be added to get (the exact position) of string based on previous modifications
-     * @param {number} position relative offset based on 8-byte address of a string
-     * @returns {number} the sum of addition and deletion made before the specified string
+     * Calculates a new Absolute Offset of a String Data based on all modifications made
+     * @param {number} absoluteOffset - absolute offset of String Data
+     * @returns {number} the new offset
      */
-    getOffset(position) {
+    getOffset(absoluteOffset) {
         const filteredArray = this.arrayModification.filter(
-            (x) => x.key < position
+            (x) => x.key < absoluteOffset
         );
 
         let offset = 0;
 
         if (filteredArray.length > 0) {
             const reducer = (accumulator, currentValue) => {
-                return accumulator + currentValue.chars;
+                return accumulator + currentValue.charsAdded;
             };
 
             offset = filteredArray.reduce(reducer, 0);
@@ -389,14 +412,12 @@ class BufferOperations extends BufferSturcture {
     }
 
     /**
-     * Update relative offset with new value by modifying the second 4-byte array
-     * @param newRelativeOffset
-     * @param location
+     * Update Directory Entry offset by modifying the second 4-bytes array
+     * @param {number} newRelativeOffset
+     * @param {number} location - Directory Entry location
      */
     updateRelativeOffset(newRelativeOffset, location) {
-        location += 4;
-
-        this.Uint32ArrayUpdate(newRelativeOffset, location);
+        this.Uint32ArrayUpdate(newRelativeOffset, location + 4);
     }
 }
 

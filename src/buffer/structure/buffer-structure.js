@@ -4,7 +4,7 @@ const ArrayOperations = require('../../array-operations');
 /**
  * @typedef {Object} StringDataObject
  * @property  {number} id
- * @property  {number} address
+ * @property  {number} address - Directory Entry position
  * @property  {number} relativeOffset
  * @property  {number} absoluteOffset
  * @property  {number} nullPoint
@@ -125,7 +125,7 @@ class BufferStructure {
     }
 
     /**
-     * To uses the appropriate method to get end point based on file extension
+     * Uses the appropriate method to get String Data endpoint based on file extension
      * @param {Uint8Array} array
      * @param {number} offset
      * @returns {number}
