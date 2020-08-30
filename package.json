@@ -9,11 +9,12 @@
   },
   "scripts": {
     "lint": "eslint --ext .js,.vue --ignore-path .gitignore .",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --collect-coverage",
     "combine": "node ./example/combineTwoSubFiles.js",
     "reencode": "node ./example/changeEncoding.js",
-    "compare": "node test/compare.js",
-    "encoding": "FC files\\input\\french-1252\\Skyrim_French.DLSTRINGS files\\output\\Skyrim_French.DLSTRINGS"
+    "compare": "node tests/compare.js",
+    "encoding": "FC /B files\\input\\french-1252\\Skyrim_French.DLSTRINGS files\\output\\Skyrim_French.DLSTRINGS",
+    "test_result": "FC /B files\\output\\save\\Skyrim_English.ILSTRINGS files\\output\\Skyrim_English.ILSTRINGS"
   },
   "repository": {
     "type": "git",
@@ -36,6 +37,7 @@
     "iconv-lite": "^0.6.2"
   },
   "devDependencies": {
+    "@types/jest": "^26.0.10",
     "eslint": "^5.16.0",
     "eslint-config-airbnb": "^18.2.0",
     "eslint-config-node": "^4.1.0",
@@ -46,6 +48,7 @@
     "eslint-plugin-prettier": "^3.1.4",
     "eslint-plugin-react": "^7.20.0",
     "eslint-plugin-react-hooks": "^4.0.0",
+    "jest": "^26.4.2",
     "prettier": "^2.1.1"
   }
 }

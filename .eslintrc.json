@@ -1,4 +1,7 @@
 {
+    "env": {
+        "jest": true
+    },
     "extends": ["airbnb", "prettier", "plugin:node/recommended"],
     "plugins": ["prettier"],
     "rules": {
@@ -10,6 +13,7 @@
         "object-shorthand": "off",
         "class-methods-use-this": "off",
         "consistent-return": "off",
-        "indent": ["error", 4]
+        "indent": ["error", 4],
+        "no-return-assign": "off"
     }
 }

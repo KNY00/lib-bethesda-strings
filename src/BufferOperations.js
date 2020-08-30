@@ -1,22 +1,42 @@
-const BufferSturcture = require('./BufferStructure.js');
-const ComputeTx = require('./ComputeTx.js');
-const ArrayOperations = require('./ArrayOperations.js');
+const BufferSturcture = require('./buffer/structure');
+const Uint32 = require('./uint32');
+const ArrayOperations = require('./array-operations');
 
+/**
+ *
+ * @extends BufferSturcture
+ */
 class BufferOperations extends BufferSturcture {
     /**
      * constructor
-     * @param {Uint8Array} array
-     * @param {String} fileType
+     * @constructs
+     * @param {Uint8Array} array - file buffer
+     * @param {String} fileType - extension ilstrings, dlstrings, strings
      */
     constructor(array, fileType) {
         super(array, fileType);
+
+        /**
+         * holds all modifications made to the buffer
+         * @type {Array}
+         */
         this.arrayModification = [];
+
+        /**
+         * holds the buffer
+         * @type {Uint8Array}
+         */
         this.arrayBuffer = array;
+
+        /**
+         * @type {Array}
+         */
         this.unupdatedAdresses = [];
     }
 
     /**
-     * @returns {Object[]}
+     * TODO: this is just an alias, should be removed
+     * @returns {Array<StringDataObject>}
      */
     getEntries() {
         return super.getBufferObject();
@@ -28,33 +48,38 @@ class BufferOperations extends BufferSturcture {
      * @param modificationFx
      * @returns {Uint8Array} array result after all modifications have been made
      */
-    modifyEntries(conditionFx, modificationFx)
-    {
+    modifyEntries(conditionFx, modificationFx) {
         let bufferObject = super.getBufferObject();
 
-        // Sort buffer by relative offset bigger is last
+        // Sort buffer by relative offset
+        // Bigger is last
         bufferObject.sort((a, b) => {
             return a.relativeOffset - b.relativeOffset;
         });
 
         // PREVENTS OPERATIONS ON DUPLICATES
+        // Sometimes, for subtitles in game, a dialogue can have multiple addresses
         bufferObject = bufferObject.reduce((accumulator, currentValue) => {
             let relativeOffsetAlreadyExists = false;
 
-            for (let x = 0; x < accumulator.length; x++) {
-
-                if (accumulator[x].relativeOffset
-                    === currentValue.relativeOffset) {
+            for (let x = 0; x < accumulator.length; x += 1) {
+                if (
+                    accumulator[x].relativeOffset ===
+                    currentValue.relativeOffset
+                ) {
                     relativeOffsetAlreadyExists = true;
                     break;
                 }
             }
 
             if (relativeOffsetAlreadyExists) {
-                this.registerAddressLocation(currentValue.address, currentValue.relativeOffset);
+                this.registerAddressLocation(
+                    currentValue.address,
+                    currentValue.relativeOffset
+                );
                 return accumulator;
             } else {
-                return [...accumulator, currentValue]
+                return [...accumulator, currentValue];
             }
         }, []);
 
@@ -66,10 +91,16 @@ class BufferOperations extends BufferSturcture {
             const offset = this.getOffset(element.absoluteOffset);
 
             const relativeSeqLocation = element.address + 4;
-            this.Uint32ArrayUpdate((element.relativeOffset - offset),  relativeSeqLocation);
+            this.Uint32ArrayUpdate(
+                element.relativeOffset - offset,
+                relativeSeqLocation
+            );
 
             // Update relative offset of all constructs
-            this.updateArrayOfRelativeOffsets(element.relativeOffset, (element.relativeOffset - offset));
+            this.updateArrayOfRelativeOffsets(
+                element.relativeOffset,
+                element.relativeOffset - offset
+            );
 
             /*
              * if during a previous modification the segment string has already been changed
@@ -79,13 +110,27 @@ class BufferOperations extends BufferSturcture {
              * Example: xy[SPE][SPE][NULL]{3} changes to xy[Nor][NULL]{4]
              */
             const absoluteOffsetAdapted = element.absoluteOffset - offset;
-            const endPoint = super.getNullPoint(this.arrayBuffer, absoluteOffsetAdapted);
-            const entry = this.arrayBuffer.slice(absoluteOffsetAdapted, endPoint);
+            const endPoint = super.getEndPoint(
+                this.arrayBuffer,
+                absoluteOffsetAdapted
+            );
+            const entry = this.arrayBuffer.slice(
+                absoluteOffsetAdapted,
+                endPoint
+            );
 
             // MODIFICATION HERE
             if (conditionFx(element)) {
-                this.modifyString(entry, absoluteOffsetAdapted, element.absoluteOffset, modificationFx, element);
-                console.log('PERCENTAGE : ' + ((index / bufferObject.length) * 100));
+                this.modifyString(
+                    entry,
+                    absoluteOffsetAdapted,
+                    element.absoluteOffset,
+                    modificationFx,
+                    element
+                );
+                console.log(
+                    'PERCENTAGE : ' + (index / bufferObject.length) * 100
+                );
             }
         }
 
@@ -120,9 +165,9 @@ class BufferOperations extends BufferSturcture {
      * @constructor
      */
     Uint32ArrayUpdate(newValue, location) {
-        let arrayBytes = ComputeTx.convertDecimalToByteArray(newValue);
+        let arrayBytes = Uint32.fromDecimalToByteArray(newValue);
 
-        for( let z = 0; z < arrayBytes.length; z++) {
+        for (let z = 0; z < arrayBytes.length; z++) {
             this.arrayBuffer[location + z] = arrayBytes[z];
         }
     }
@@ -135,14 +180,20 @@ class BufferOperations extends BufferSturcture {
      * @param modificationFx
      * @param entryObject
      */
-    modifyDotIlstringsDlStringsString(array, offset, absoluteOffsetInitial, modificationFx, entryObject) {
+    modifyDotIlstringsDlStringsString(
+        array,
+        offset,
+        absoluteOffsetInitial,
+        modificationFx,
+        entryObject
+    ) {
         const originalArrayLength = array.length;
 
         // taking the uint32 array
         const stringSizeArray = array.slice(0, 4);
 
         // converting uint32 array to uint32
-        const stringSize = ComputeTx.computeLengthFromByteArray(stringSizeArray);
+        const stringSize = Uint32.fromByteArrayToDecimal(stringSizeArray);
 
         // taking string part
         let textArray = array.slice(4);
@@ -155,14 +206,19 @@ class BufferOperations extends BufferSturcture {
         // TODO: That does not do anything as the comparison is bad
         if (textArray !== processedArray) {
             // gets the length of the new entry
-            const stringSizeArrayUpdated = ComputeTx.convertDecimalToByteArray(stringSize - modification);
+            const stringSizeArrayUpdated = Uint32.fromDecimalToByteArray(
+                stringSize - modification
+            );
 
             // Replacing modified section in array
             this.arrayBuffer = ArrayOperations.replaceSectionInArray(
                 this.arrayBuffer,
                 offset,
                 array,
-                ArrayOperations.concatArrays(stringSizeArrayUpdated, processedArray) // appends the length before the new generated string
+                ArrayOperations.concatArrays(
+                    stringSizeArrayUpdated,
+                    processedArray
+                ) // appends the length before the new generated string
             );
 
             this.registerModification(absoluteOffsetInitial, modification);
@@ -180,7 +236,13 @@ class BufferOperations extends BufferSturcture {
      * @param modificationFx
      * @param entryObject
      */
-    modifyDotStringsString(array, offset, absoluteOffsetInitial, modificationFx, entryObject) {
+    modifyDotStringsString(
+        array,
+        offset,
+        absoluteOffsetInitial,
+        modificationFx,
+        entryObject
+    ) {
         let textArray = [...array];
 
         const originalArrayLength = textArray.length;
@@ -214,11 +276,29 @@ class BufferOperations extends BufferSturcture {
      * @param modificationFx
      * @param entryObject
      */
-    modifyString(array, offset, absoluteOffsetInitial, modificationFx, entryObject) {
+    modifyString(
+        array,
+        offset,
+        absoluteOffsetInitial,
+        modificationFx,
+        entryObject
+    ) {
         if (this.fileType === 'dlstrings' || this.fileType === 'ilstrings') {
-            return this.modifyDotIlstringsDlStringsString(array, offset, absoluteOffsetInitial, modificationFx, entryObject,);
-        } else if (this.fileType === 'strings'){
-            return this.modifyDotStringsString(array, offset, absoluteOffsetInitial, modificationFx, entryObject,);
+            return this.modifyDotIlstringsDlStringsString(
+                array,
+                offset,
+                absoluteOffsetInitial,
+                modificationFx,
+                entryObject
+            );
+        } else if (this.fileType === 'strings') {
+            return this.modifyDotStringsString(
+                array,
+                offset,
+                absoluteOffsetInitial,
+                modificationFx,
+                entryObject
+            );
         }
 
         throw 'File extension is not supported.';
@@ -232,8 +312,8 @@ class BufferOperations extends BufferSturcture {
     registerModification(position, numberCharAffected) {
         this.arrayModification.push({
             key: position,
-            chars: numberCharAffected
-        })
+            chars: numberCharAffected,
+        });
     }
 
     /**
@@ -242,21 +322,22 @@ class BufferOperations extends BufferSturcture {
      * @returns {number} the sum of addition and deletion made before the specified string
      */
     getOffset(position) {
-        const filteredArray = this.arrayModification.filter(x => x.key < position);
+        const filteredArray = this.arrayModification.filter(
+            (x) => x.key < position
+        );
 
         let offset = 0;
 
         if (filteredArray.length > 0) {
-            const reducer = ((accumulator, currentValue) => {
+            const reducer = (accumulator, currentValue) => {
                 return accumulator + currentValue.chars;
-            });
+            };
 
             offset = filteredArray.reduce(reducer, 0);
         }
 
         return offset;
     }
-
 
     /**
      * Register location of an entry that has a non unique relativeOffset
@@ -267,17 +348,19 @@ class BufferOperations extends BufferSturcture {
     registerAddressLocation(addressLocation, relativeOffset) {
         // if key of relativeOffset already exists in array
         // we update array by pushing the new value
-        for(let index = 0; index < this.unupdatedAdresses.length; index++) {
+        for (let index = 0; index < this.unupdatedAdresses.length; index++) {
             const row = this.unupdatedAdresses[index];
             if (row.relativeOffset === relativeOffset) {
-                this.unupdatedAdresses[index].arrayAddresses.push(addressLocation);
+                this.unupdatedAdresses[index].arrayAddresses.push(
+                    addressLocation
+                );
                 return true;
             }
         }
 
         this.unupdatedAdresses.push({
             relativeOffset: relativeOffset,
-            arrayAddresses: [addressLocation]
+            arrayAddresses: [addressLocation],
         });
 
         return true;
@@ -290,10 +373,12 @@ class BufferOperations extends BufferSturcture {
      * @returns {boolean}
      */
     updateArrayOfRelativeOffsets(relativeOffset, newRelativeOffset) {
-        const row = this.unupdatedAdresses.filter(item => item.relativeOffset === relativeOffset);
+        const row = this.unupdatedAdresses.filter(
+            (item) => item.relativeOffset === relativeOffset
+        );
 
         if (row.length > 0) {
-            row[0].arrayAddresses.forEach(location => {
+            row[0].arrayAddresses.forEach((location) => {
                 this.updateRelativeOffset(newRelativeOffset, location);
             });
 
@@ -311,7 +396,7 @@ class BufferOperations extends BufferSturcture {
     updateRelativeOffset(newRelativeOffset, location) {
         location += 4;
 
-        this.Uint32ArrayUpdate(newRelativeOffset,  location);
+        this.Uint32ArrayUpdate(newRelativeOffset, location);
     }
 }
 

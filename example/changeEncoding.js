@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const Reencode = require('./modifier/Reencode.js');
+const modifyEncoding = require('./modifier/EncodingClass.js');
 const BufferOperations = require('../src/BufferOperations.js');
 
 const extension = '.DLSTRINGS';
@@ -11,7 +11,7 @@ const filePathOutput = path.join(__dirname, '/../files/output', fileName);
 const condition = () => true;
 
 const modification = (stringArray) =>
-    Reencode.arraySectionReencode(stringArray);
+    modifyEncoding.convertUtf8ToWindows1252(stringArray);
 
 fs.readFile(filePath, (err, data) => {
     if (err) {

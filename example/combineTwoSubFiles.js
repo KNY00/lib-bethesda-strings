@@ -36,7 +36,6 @@ const subfolder = '-utf8/';
 [0, 1, 2, 3, 4].forEach((index) => {
     // all this section is used to name properly the files and folders
     // case sensitivity for files and folders in not that important on windows
-    // but im developing on a Linux environment
     let rootName = container[index];
     const ext = '.ILSTRINGS';
     let extSaid = ext.toLowerCase();
