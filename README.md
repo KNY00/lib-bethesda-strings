@@ -1,5 +1,5 @@
 # lib-bethesda-strings
-Library to edit string files of Bethesda Skyrim game. This includes files with the extension Ilstrings, Dlstrings, and Strings,
+Library made to edit string files of Bethesda Skyrim game. This includes files with the extension Ilstrings, Dlstrings, and Strings.
 
 # Introduction
 I have made this library to modify Skyrim translation files, with the idea to merge different languages in the subtitles. It can be used to modify any string in the game by applying a filter and a modification function.
@@ -64,12 +64,12 @@ The following examples show the previously mentioned filters
 ```javascript
 // dialogues with a length superior at 10 will be modified
 let filter = ( StringDataObject ) => {
-    return ( StringDataObject.length > 10) ? true : false;
+    return (StringDataObject.length > 10) ? true : false;
 }
 
 
 // dialogues with a string starting with "Libussa"
-let filter = ( StringDataObject) => {
+filter = ( StringDataObject) => {
 
     // we transform the word to a Uint8Array
     const name = "Libussa";

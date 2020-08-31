@@ -363,19 +363,20 @@ class BufferOperations extends BufferSturcture {
     }
 
     /**
-     * Register location of an entry that has a non unique relativeOffset
-     * @param {number} addressLocation
+     * Registers the location of a directory entry that points to a String Data
+     that already has a directory entry
+     * @param {number} directoryEntryLocation
      * @param {number} relativeOffset
      * @returns {boolean}
      */
-    registerAddressLocation(addressLocation, relativeOffset) {
-        // if key of relativeOffset already exists in array
-        // we update array by pushing the new value
-        for (let index = 0; index < this.unupdatedAdresses.length; index++) {
+    registerAddressLocation(directoryEntryLocation, relativeOffset) {
+        // if the String Data has already at least 1 duplicated directory entry
+        // we update the array by pushing the new DirectoryE ntry location
+        for (let index = 0; index < this.unupdatedAdresses.length; index += 1) {
             const row = this.unupdatedAdresses[index];
             if (row.relativeOffset === relativeOffset) {
                 this.unupdatedAdresses[index].arrayAddresses.push(
-                    addressLocation
+                    directoryEntryLocation
                 );
                 return true;
             }
@@ -383,16 +384,17 @@ class BufferOperations extends BufferSturcture {
 
         this.unupdatedAdresses.push({
             relativeOffset: relativeOffset,
-            arrayAddresses: [addressLocation],
+            arrayAddresses: [directoryEntryLocation],
         });
 
         return true;
     }
 
     /**
-     * Updates the relative offset in the 8-byte structure for addresses that had the same relative offset
-     * @param relativeOffset
-     * @param newRelativeOffset
+     * Updates the relative offset in the 8-byte structure
+     for addresses that had originally the same relative offset
+     * @param {number} relativeOffset
+     * @param {number} newRelativeOffset
      * @returns {boolean}
      */
     updateArrayOfRelativeOffsets(relativeOffset, newRelativeOffset) {
