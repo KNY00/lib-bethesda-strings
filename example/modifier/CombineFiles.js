@@ -1,5 +1,5 @@
-const BufferOperations = require('../../src/BufferOperations.js');
 const ArrayOperations = require('../../src/array-operations');
+const { BufferOperations } = require('../../src/buffer');
 
 class CombineFiles {
     constructor(secondFileArray, extension) {
@@ -29,7 +29,9 @@ class CombineFiles {
                 // We remove the first 4 bytes (length of string in Uint32)
                 // The class is gonna calculate the length (append uint32 array before the string)
                 // of the new string that this function will return
-                let entryStringArrayWithNoLengthSequence = entry.stringArray.slice(4);
+                let entryStringArrayWithNoLengthSequence = entry.stringArray.slice(
+                    4
+                );
 
                 // condition is necessary if a file contains only an endpoint 0x00
                 // in this case we will have 0x0A 0x00 which is useless (line break, then nothing)
@@ -41,7 +43,8 @@ class CombineFiles {
                     // to separate both languages
                     entryStringArrayWithNoLengthSequence = ArrayOperations.concatArrays(
                         Uint8Array.from([0x0a]),
-                        entryStringArrayWithNoLengthSequence)
+                        entryStringArrayWithNoLengthSequence
+                    );
                 }
 
                 return ArrayOperations.concatArrays(

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const modifyEncoding = require('./modifier/EncodingClass.js');
-const BufferOperations = require('../src/BufferOperations.js');
+const { BufferOperations } = require('../src/buffer');
 
 const extension = '.DLSTRINGS';
 const fileName = `Skyrim_French${extension}`;

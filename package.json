@@ -11,7 +11,7 @@
     "lint": "eslint --ext .js,.vue --ignore-path .gitignore .",
     "test": "jest --collect-coverage",
     "combine": "node ./example/combineTwoSubFiles.js",
-    "reencode": "node ./example/changeEncoding.js",
+    "change_encoding": "node ./example/changeEncoding.js",
     "compare": "node tests/compare.js",
     "encoding": "FC /B files\\input\\french-1252\\Skyrim_French.DLSTRINGS files\\output\\Skyrim_French.DLSTRINGS",
     "test_result": "FC /B files\\output\\save\\Skyrim_English.ILSTRINGS files\\output\\Skyrim_English.ILSTRINGS"

@@ -1,6 +1,6 @@
-const BufferSturcture = require('./buffer/structure');
-const Uint32 = require('./uint32');
-const ArrayOperations = require('./array-operations');
+const BufferSturcture = require('./structure');
+const Uint32 = require('../uint32');
+const ArrayOperations = require('../array-operations');
 
 /**
  * Performs operations on the buffer
@@ -36,7 +36,7 @@ class BufferOperations extends BufferSturcture {
 
     /**
      * TODO: this is just an alias, should be removed
-     * @returns {Array<StringDataObject>}
+     * @returns {Array.<StringDataObject>}
      */
     getEntries() {
         return super.getBufferObject();

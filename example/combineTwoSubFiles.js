@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const BufferOperations = require('../src/BufferOperations.js');
+const { BufferOperations } = require('../src/buffer');
 const CombineFiles = require('./modifier/CombineFiles.js');
 
 /**

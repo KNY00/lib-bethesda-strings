@@ -9,6 +9,33 @@ I have used it to merge two subtitles from two different languages. I have also 
 All the informations relative to the files are available on the following [link](https://en.uesp.net/wiki/Tes5Mod:String_Table_File_Format)
 The library uses typed arrays (Uint8Array). Although some methods accept normal arrays; the output if it is an array will be a typed array most of the time.
 
+# Purpose
+This library powers a Skyrim Mod :
+- [Skyrim](https://www.nexusmods.com/skyrim/mods/101846)
+- [Skyrim Special Edition](https://www.nexusmods.com/skyrim/mods/101846)
+
+# Files
+You can find the files that I have used for the examples here:
+- [Skyrim](https://www.nexusmods.com/skyrim/mods/82578/?)
+- [Skyrim Special Edition](https://www.nexusmods.com/skyrimspecialedition/mods/4505)
+
+# Files folder structure
+The language name, then a hyphen, then the encoding (1252 for Windows-1252 and utf8 for UTF-8)
+
+```
+files
+    input
+        english-1252
+            skyrim_english.dlstrings
+            skyrim_english.ilstrings
+            skyrim_english.strings
+        english-utf8
+        french-1252
+        french-utf8      
+    output
+        
+```
+
 # How to use it
 
 There are two main classes BufferStructure and BufferOperations that extends from it.
@@ -63,40 +90,42 @@ Each of its properties could be used to filter a specific dialogue in the game. 
 The following examples show the previously mentioned filters
 ```javascript
 // dialogues with a length superior at 10 will be modified
-let filter = ( StringDataObject ) => {
-    return (StringDataObject.length > 10) ? true : false;
+let filter = ( stringDataObject ) => {
+    return (stringDataObject.length > 10) ? true : false;
 }
 
 
-// dialogues with a string starting with "Libussa"
-filter = ( StringDataObject) => {
-
+// dialogues with a string starting with "Louder than the roar of"
+const filter = (stringDataObject) => {
     // we transform the word to a Uint8Array
-    const name = "Libussa";
+    const name = 'Louder than the roar of';
     const buffer = Buffer.from(name);
-    const libussaUint8Array = Uint8Array.from(buffer);
-    
+    const searchUint8Array = Uint8Array.from(buffer);
+
     // We get from  StringDataObject, stringArray
     // We slice it to match the length of the UintArray of the word that we are searching.
-    const libussaLength = libussaUint8Array.length;
-    const objectStartsWith =  StringDataObject.stringArray.slice(0, libussaLength);
-    
-    
-    // We compare the two arrays  
-    // This part is not useless since slice function does not throw an error if the result is too short 
-    if (libussaLength === objectStartsWith.length) {
+    const searchLength = searchUint8Array.length;
+    const objectStartsWith = stringDataObject.stringArray.slice(
+        4, // it's an ilstring so Data String contains a Uint32
+        searchLength + 4
+    );
+
+    // We compare the two arrays
+    if (searchLength === objectStartsWith.length) {
         // then we compare each value
-        for ( let x = 0; x < libussaLength; x += 1) {
-            if (libussaUint8Array[x] !== objectStartsWith[x]) {
+        for (let x = 0; x < searchLength; x += 1) {
+            if (searchUint8Array[x] !== objectStartsWith[x]) {
                 // any of the values does not match, the function returns false
-                return false
+                return false;
             }
         }
+    } else {
+        return false;
     }
-    
+
     // the sentence was found at the beginning the function will return true
     return true;
-}
+};
 ```
 For the last example, there's is a function available in ArrayOperations class that can perform the comparison, getPositionSequenceInArray
 
@@ -111,6 +140,14 @@ The newly generated Uint8Array will replace the existing one in the  StringDataO
 
 ```javascript
 let modification = (stringArray) => {
-    return Uint8Array.from(Buffer.from("hello world"));
+    const uint8 = Uint8Array.from(Buffer.from("hello world "));
+    
+    // every String Data should end with a null terminator so in this example we replace the last space in the string by a null terminator
+    uint8[uint8.length - 1] = 0;
+    
+    return uint8;
 }
 ```
+
+# License
+MIT
